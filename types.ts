@@ -71,7 +71,7 @@ export type Space = 'auto' | number | number[] | string | string[] | GlobalValue
 export type Break = 'auto' | 'avoid' | 'always' | 'all' | 'avoid-pages' | 'page' | 'left' | 'right' | 'recto' | 'verso' | 'avoid-column' | 'column' | 'avoid-region' | GlobalValues;
 export type Number = 'calc()' | number | string | GlobalValues;
 
-export interface StyleProperties {
+export type StyleProperties = {
   alignContent?: FlexAlignment;
   alignItems?: FlexAlignmentItem;
   alignSelf?: FlexAlignmentItem;
@@ -114,7 +114,7 @@ export interface StyleProperties {
   borderLeftColor?: Color;
   borderLeftStyle?: BorderStyle;
   borderLeftWidth?: BorderWidth;
-  borderRadius?: string | number | string[] | number[] | GlobalValues;
+  borderRadius?: string | number | string[] | (number|string)[] | GlobalValues;
   borderRight?: BorderStyle | BorderWidth | string | number | string[] | GlobalValues;
   borderRightColor?: Color;
   borderRightStyle?: BorderStyle;
@@ -235,7 +235,7 @@ export interface StyleProperties {
   listStyleImage?: 'none' | 'url()' | GlobalValues;
   listStylePosition?: 'inside' | 'outside' | GlobalValues;
   listStyleType?: 'none' | 'disc' | 'circle' | 'square' | 'decimal' | 'georgian' | 'trad-chinese-informal' | 'kannada' | '-' | '@<<custom>>' | GlobalValues;
-  margin?: 'auto' | Number | string | number | string[] | number[];
+  margin?: 'auto' | Number | string | number | (string | number)[];
   marginBottom?: 'auto' | Number | string | number;
   marginLeft?: StyleProperties['marginBottom']
   marginRight?: StyleProperties['marginBottom'];
@@ -262,7 +262,7 @@ export interface StyleProperties {
   overflowWrap?: 'normal' | 'break-word' | 'anywhere' | GlobalValues;
   overflowX?: 'clip' | StyleProperties['overflowBlock'];
   overflowY?: 'clip' | StyleProperties['overflowBlock'];
-  padding?: Number | string | number | string[] | number[] | GlobalValues;
+  padding?: Number | string | number | (number|string)[] | GlobalValues;
   paddingBottom?: Number;
   paddingLeft?: Number;
   paddingRight?: Number;
@@ -321,7 +321,7 @@ export interface StyleProperties {
   zIndex?: string | GlobalValues;
   // custom specials
   cornerRadius?: StyleProperties['borderRadius'];
-}
+} | {[key: string]: string}
 
 export type RxElement = {
 
@@ -524,7 +524,7 @@ export type RxElement = {
   overflowWrap: (value: 'normal' | 'break-word' | 'anywhere' | GlobalValues) => RxElement
   overflowX: (value: 'clip' | StyleProperties['overflowBlock']) => RxElement
   overflowY: (value: 'clip' | StyleProperties['overflowBlock']) => RxElement
-  padding: (value: Number | string | number | string[] | number[] | GlobalValues) => RxElement
+  padding: (value: Number | string | number | (string | number)[] | GlobalValues) => RxElement
   paddingBottom: (value: Number) => RxElement
   paddingLeft: (value: Number) => RxElement
   paddingRight: (value: Number) => RxElement
@@ -551,6 +551,7 @@ export type RxElement = {
   textDecorationLine: (value: 'none' | 'underline' | 'overline' | 'line-through' | 'blink' | string | GlobalValues) => RxElement
   textDecorationStyle: (value: 'solid' | 'double' | 'dotted' | 'dashed' | 'wavy' | GlobalValues ) => RxElement
   textDecorationThickness: (value: 'auto' | 'from-font' | number | string | GlobalValues) => RxElement
+  textFillColor: (value: Color) => RxElement
   textIndent: (value: 'each-line' | 'hanging' | number | string | GlobalValues) => RxElement
   textJustify: (value: 'none' | 'auto' | 'inter-word' | 'inter-character' | 'distribute') => RxElement
   textOrientation: (value: 'mixed' | 'upright' | 'sideways-right' | 'sideways' | 'use-glyph-orientation' | GlobalValues) => RxElement
@@ -573,6 +574,8 @@ export type RxElement = {
   userSelect: (value: 'none' | 'auto' | 'text' | 'contain' | 'all' | 'element' | GlobalValues) => RxElement
   verticalAlign: (value: 'baseline' | 'sub' | 'super' | 'text-top' | 'text-bottom' | 'middle' | 'top' | 'bottom' | number | string | GlobalValues) => RxElement
   visibility: (value: 'visible' | 'hidden' | 'collapse' | GlobalValues) => RxElement
+  webkitBackgroundClip: (value: 'text' | StyleProperties['boxSizing']) => RxElement
+  webkitTextFillColor: (value: Color) => RxElement
   whiteSpace: (value: 'normal' | 'nowrap' | 'wrap' | 'pre' | 'pre-wrap' | 'pre-line' | 'break-spaces' | GlobalValues) => RxElement
   width: (value: Number) => RxElement
   wordBreak: (value: 'normal' | 'break-all' | 'keep-all' | 'break-word' | GlobalValues) => RxElement

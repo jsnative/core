@@ -1,10 +1,12 @@
 {
   "name": "@js-native/core",
-  "version": "0.0.6",
+  "version": "0.0.11",
   "description": "JS Native core package",
-  "main": "instance.ts",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "build": "tsc",
+    "prepublish": "tsc"
   },
   "repository": {
     "type": "git",
@@ -18,5 +20,8 @@
   "homepage": "https://github.com/jsnative/core#readme",
   "dependencies": {
     "user": "0.0.0"
+  },
+  "devDependencies": {
+    "typescript": "*"
   }
 }

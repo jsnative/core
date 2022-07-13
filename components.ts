@@ -29,7 +29,7 @@ export class $RxElement {
   $className: string = undefined;
   $styles: Style[] = [];
   $pseudo: {[key: string]: StyleProperties}[] = [];
-  $medias: {[key: string]: StyleProperties}[] = [];
+  $medias: {[key: string]: StyleProperties | string}[] = [];
   $global: {[key: string]: StyleProperties}[] = [];
 
   // Layout function keys
@@ -113,6 +113,14 @@ export class $RxElement {
     }
   }
 
+  removeChildren(): RxElement {
+    if(this.$children.length > 0) {
+      this.$children.forEach(child => child.$root = undefined);
+      this.$children.splice(0, this.$children.length);
+      return this;
+    }
+  }
+
   replaceChild(child: RxElement, newChild: RxElement) {
     if(this.$children.indexOf(child) > -1) {
       if(newChild.$root != undefined) {
@@ -133,10 +141,11 @@ export class $RxElement {
   on(fns: ElementEvent | {[key: string]: (e?: Event) => void }): RxElement {
     this.$events = this.$events || [];
     for(const fn in fns) {
-      const event: any = {};
-      event[fn] = (<any>fns)[fn];
+      // const event: any = {};
+      // event[fn] = (<any>fns)[fn];
       if(type((<any>fns)[fn]) !== 'function') throw `${(<any>fns)[fn]} is not a function`;
       // console.log(Function.prototype.bind.apply(fns[fn], this), this);
+      if(type(this.$events) !== 'array') console.trace(this, this.$events);
       this.$events.push({
         event: (<any>fns)[fn].bind(this),
         name: fn, object: this
@@ -146,6 +155,14 @@ export class $RxElement {
       // const binding = Native.bindings[Native.serving.split('-')[1]];
       // binding.push({ event: fns[fn], object: this, name: fn });
       // this.events.push(event);
+    }
+    return this;
+  }
+
+  dispatch(event: string) {
+    if(!this.$node) throw `Cannot dispatch, node is not attached`;
+    else {
+      this.$node.dispatchEvent(new Event(event));
     }
     return this;
   }
@@ -210,6 +227,15 @@ export class $RxElement {
       createRules(this, rules);
     });
     return this;
+  }
+
+  animate(callback: () => void): any {
+    const work = () => {
+      callback();
+      requestAnimationFrame(work);
+    }
+    requestAnimationFrame(work)
+    return this
   }
 
   // functions
@@ -470,6 +496,7 @@ export class $RxElement {
   textDecorationLine: (_?: 'none' | 'underline' | 'overline' | 'line-through' | 'blink' | string | GlobalValues) => RxElement
   textDecorationStyle: (_?: 'solid' | 'double' | 'dotted' | 'dashed' | 'wavy' | GlobalValues ) => RxElement
   textDecorationThickness: (_?: 'auto' | 'from-font' | number | string | GlobalValues) => RxElement
+  textFillColor: (_?: Color) => RxElement
   textIndent: (_?: 'each-line' | 'hanging' | number | string | GlobalValues) => RxElement
   textJustify: (_?: 'none' | 'auto' | 'inter-word' | 'inter-character' | 'distribute') => RxElement
   textOrientation: (_?: 'mixed' | 'upright' | 'sideways-right' | 'sideways' | 'use-glyph-orientation' | GlobalValues) => RxElement
@@ -492,6 +519,8 @@ export class $RxElement {
   userSelect: (_?: 'none' | 'auto' | 'text' | 'contain' | 'all' | 'element' | GlobalValues) => RxElement
   verticalAlign: (_?: 'baseline' | 'sub' | 'super' | 'text-top' | 'text-bottom' | 'middle' | 'top' | 'bottom' | number | string | GlobalValues) => RxElement
   visibility: (_?: 'visible' | 'hidden' | 'collapse' | GlobalValues) => RxElement
+  webkitBackgroundClip: (_?: 'text' | StyleProperties['boxSizing']) => RxElement
+  webkitTextFillColor: (_?: Color) => RxElement
   whiteSpace: (_?: 'normal' | 'nowrap' | 'wrap' | 'pre' | 'pre-wrap' | 'pre-line' | 'break-spaces' | GlobalValues) => RxElement
   width: (_?: Number) => RxElement
   wordBreak: (_?: 'normal' | 'break-all' | 'keep-all' | 'break-word' | GlobalValues) => RxElement
@@ -1058,7 +1087,7 @@ export class $RxElement {
 
   tag(tag?: string): RxElement | string {
     if(tag !== undefined) {
-      this.$tag = window.Object.assign(this.tag() || {}, tag);
+      this.$tag = tag;
       return this;
     }
     return this.$tag;
@@ -1096,15 +1125,19 @@ export class $RxElement {
     return this;
   }
 
-  replaceTextTag(text: string, tagObject: {[key: string]: typeof $RxElement}): RxElement {
-    const all = text.match(/([\${\w]+\([\w,\s]*\)})/g),
-    children: ($RxElement | string)[] = [],
+  replaceTextTag(text: string, tagObject: {[key: string]: any }): RxElement {
+    const all = text.match(/\${\w+(\(.*\))?\}?/g);
+    const children: ($RxElement | string)[] = [],
     p = (t: string) => {
       all.map((i, inx) => {
-        const tag = i.match(/{([\w]+\()/g)[0].replace('{','').replace('(',''),
-        args = i.match(/(\([\w,]+)/g).map(i => i.replace('(', ''));
+        let tag: any = i.replace('${','').replace('}',''), args = [];
+        const match = tag.match(/(\w+)\(/g);
+        if(match) {
+          tag = match[0]?.replace('(','');
+          args = i.match(/(\(.*)\)/g).map(i => i.replace('(', '').replace(')', ''));
+        }
         children.push(t.slice(0, t.indexOf(i)));
-        children.push(new tagObject[tag](...args));
+        children.push(tagObject[tag](...args));
         t = t.slice(t.indexOf(i) + i.length);
         if(inx === all.length - 1) {
           if(t.length > 0) children.push(t);
@@ -1176,7 +1209,7 @@ export class Component extends $RxElement {
 
   $nid: string;
   $level = 0;
-  $events: {[key: string]: ((..._: any) => any)[] } = {} as any;
+  $events: {[key: string]: ((..._: any) => any)[] }[] = [] as any;
   $loadQueue: Function[] = [];
 
   constructor(...args: any[]) {
@@ -1230,26 +1263,6 @@ export class Component extends $RxElement {
 
   children() {
     return this.$children;
-  }
-
-  emit(event: string, payload: any) {
-    if(this.$events.hasOwnProperty(event)) {
-      for(let i = 0; i < this.$events[event].length; i++) {
-        this.$events[event][i](payload);
-      }
-    }else {
-      return false;
-    }
-    return this;
-  }
-
-  listen(event: string, listener: (..._: any) => any) {
-    if(this.$events.hasOwnProperty(event)) {
-      this.$events[event].push(listener);
-    }else {
-      this.$events[event] = [listener];
-    }
-    return this;
   }
 }
 
@@ -1491,6 +1504,14 @@ export class Input extends $RxElement {
 
   constructor() { super('input'); }
 
+  track?(obj: any) {
+    console.log(obj.name);
+    obj.watch((v: any) => console.log(v));
+    this.on({ input: (e: any) => {
+      obj = e.target.value;
+    } })
+  }
+
   model?(object: any) {
     this.$model = {
       key: Native().lock.key,
@@ -1669,6 +1690,10 @@ export class Source extends $RxElement {
 
 export class Span extends $RxElement {
   constructor() { super('span'); }
+}
+
+export class Strong extends $RxElement {
+  constructor() { super('strong'); }
 }
 
 export class Summary extends $RxElement {
