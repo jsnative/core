@@ -3,7 +3,7 @@ import {
   RxElement, ElementEvent, NativeLock, StyleProperties, FlexAlignment, FlexAlignmentItem, ConfigType,
   GlobalValues, Color, BorderStyle, BorderWidth, CSSImage, Space, Break, Number
 } from './types';
-import { ProxifyComponent, ProxifyState } from './proxify';
+import { ProxifyComponent, ProxifyState, $observeArray } from './proxify';
 import NativeClass from './native';
 import {createRules} from './styles';
 
@@ -105,7 +105,13 @@ export class $RxElement {
   removeChild(child: RxElement): RxElement {
     if(this.$children.indexOf(child) > -1) {
       child.$root = undefined;
-      this.$children.splice(this.$children.indexOf(child), 1, null);
+      const resetRules = (item: RxElement) => {
+        item.$rules = []
+        if(item.$children.length > 0) item.$children.forEach(i => type(i) === 'object' && resetRules(i))
+      }
+      resetRules(child);
+      this.$children.splice(this.$children.indexOf(child), 1);
+      // this.$children = this.$children.filter(i => i !== null``);
       return this;
     }else {
       console.warn(`Cannot removeChild: ${child.name} is not a child of ${this.name}`);
@@ -115,8 +121,8 @@ export class $RxElement {
 
   removeChildren(): RxElement {
     if(this.$children.length > 0) {
-      this.$children.forEach(child => child.$root = undefined);
-      this.$children.splice(0, this.$children.length);
+      this.$children.forEach(child => child && child.$root ? child.$root = undefined : '');
+      while(this.$children.length > 0) this.$children.pop();
       return this;
     }
   }
@@ -162,7 +168,8 @@ export class $RxElement {
   dispatch(event: string) {
     if(!this.$node) throw `Cannot dispatch, node is not attached`;
     else {
-      this.$node.dispatchEvent(new Event(event));
+      const e = new Event(event, { bubbles: false });
+      this.$node.dispatchEvent(e);
     }
     return this;
   }
@@ -215,17 +222,14 @@ export class $RxElement {
 
   medias(props: {[key: string]: StyleProperties}) {
     this.$medias.push(props);
-    const rules: string[] = [];
+    const rules: string[] = [], native = Native();
     Object.getOwnPropertyNames(props).forEach((key: string) => {
       let rule = '@media ' + key + '{ ';
       rule += this.$tagName.toLowerCase() + '.' + this.$className.replace(' ', '.') + ' {' + Parser.parseNativeStyle(props[key]) + '} ';
       rule += ' }';
       rules.push(rule);
     });
-    (<any>window).__native_load_complete_queue = (<any>window).__native_load_complete_queue || [];
-    (<any>window).__native_load_complete_queue.push(() => {
-      createRules(this, rules);
-    });
+    native.loadQueue[native.serving].push(() => createRules(this, rules));
     return this;
   }
 
@@ -246,34 +250,28 @@ export class $RxElement {
 
   pseudo(props: {[key: string]: StyleProperties}) {
     this.$pseudo.push(props);
-    const rules: string[] = [];
+    const rules: string[] = [], native = Native();
     for(const key in props) {
       rules.push('.' + this.$className.replace(' ', '.') + key + ' {' + Parser.parseNativeStyle(props[key]) + '} ');
     }
-    if(Native() && Native().sheet) {
-      createRules(this, rules)
+    if(!native.served && native.serving === this.$hostComponent) {
+      native.loadQueue[native.serving].push(() => createRules(this, rules));
     }else {
-      (<any>window).__native_load_queue = (<any>window).__native_load_queue || [];
-      (<any>window).__native_load_queue.push(() => {
-        createRules(this, rules);
-      });
+      createRules(this, rules)
     }
     return this;
   }
 
   global(props: {[key: string]: StyleProperties}) {
     this.$global.push(props);
-    const rules: string[] = [];
+    const rules: string[] = [], native = Native();
     for(const key in props) {
       rules.push('.' + this.$className + ' ' + key + ' {' + Parser.parseNativeStyle(props[key]) + '} ');
     }
-    if(Native() && Native().sheet) {
-      createRules(this, rules);
+    if(!native.served && native.serving === this.$hostComponent) {
+      native.loadQueue[native.serving].push(() => createRules(this, rules));
     }else {
-      (<any>window).__native_load_queue = (<any>window).__native_load_queue || [];
-      (<any>window).__native_load_queue.push(() => {
-        createRules(this, rules);
-      });
+      createRules(this, rules)
     }
     return this;
   }
@@ -481,6 +479,7 @@ export class $RxElement {
   perspectiveOrigin: (_?: 'center' | 'top' | 'bottom' | 'right' | string | GlobalValues) => RxElement
   pointerEvents: (_?: 'auto' | 'none' | 'visiblePainted' | 'visibleFill' | 'visibleStroke' | 'visible' | 'painted' | 'fill' | 'stroke' | 'all' | GlobalValues) => RxElement
   position: (_?: 'static' | 'relative' | 'absolute' | 'fixed' | 'sticky') => RxElement | any
+  preserveAspectRatio: (_?: 'none' | 'xMinYMin' | 'xMidYMin' | 'xMaxYMin' | 'xMinMid' | 'xMidYMid' | 'xMaxYMid' | 'xMinYMax' | 'xMidYMax' | 'xMaxYMax' | 'meet' | 'slice') => RxElement
   quotes: (_?: 'none' | 'initial' | 'auto' | string | GlobalValues) => RxElement
   resize: (_?: 'none' | 'both' | 'horizontal' | 'vertical' | 'block' | 'inline' | GlobalValues) => RxElement
   right: (_?: Number) => RxElement
@@ -1116,11 +1115,20 @@ export class $RxElement {
     return this.$relCenterHorizontal;
   }
 
-  removeClassName(name?: string): RxElement {
+  removeAllClassName(): RxElement {
     if(this.$node) {
-      this.$node.classList.remove(name);
-    }else if(this.$className.match(name)) {
-      this.$className.replace(' '+name, '');
+      this.$node.classList.forEach((i, index) => {
+        if(index > 0) this.$node.classList.remove(i);
+      });
+    }else this.$className = this.$className.replace(/ .+/, '');
+    return this;
+  }
+
+  removeClassName(classname?: string): RxElement {
+    if(this.$node) {
+      this.$node.classList.remove(classname);
+    }else if(this.$className.match(classname)) {
+      this.$className = this.$className.replace(' '+classname, '');
     }
     return this;
   }
@@ -1144,8 +1152,15 @@ export class $RxElement {
         }
       });
     };
-    p(text);
-    this.$children = this.$children.concat(children as RxElement[]);
+    if(all) {
+      p(text);
+      children.forEach((child: RxElement) => {
+        const nullIndex = this.$children.indexOf(null);
+        if(nullIndex > -1) this.$children.splice(nullIndex, 1, child)
+        else this.$children.push(child);
+        (type(child) === 'object') ? child.$root = this : '';
+      })
+    }else this.$children.push(text as any);
     return this;
   }
 
@@ -1215,7 +1230,7 @@ export class Component extends $RxElement {
   constructor(...args: any[]) {
     super('component');
     this.$nid = Math.random().toString(36).substr(2, 9);
-    this.$tagName = this.name;
+    this.$tagName = this.name.length > 2 ? this.name : this.name + this.$nid;
     Native().serving = this.name + "-" + this.$nid;
     Native().components[this.name] = Native().components[this.name] || { structure: this.constructor } as any;
     Native().components[this.name][this.$nid] = { served: false, watchlist: [] } as any;
@@ -1505,7 +1520,6 @@ export class Input extends $RxElement {
   constructor() { super('input'); }
 
   track?(obj: any) {
-    console.log(obj.name);
     obj.watch((v: any) => console.log(v));
     this.on({ input: (e: any) => {
       obj = e.target.value;
@@ -1564,7 +1578,7 @@ export class Input extends $RxElement {
   value? = (v?: string | number) => {
     if(v !== undefined) {
       if(this.$node) {
-        (<any>this.$node).value = v;
+        if((<any>this.$node).type !== 'file') (<any>this.$node).value = v;
         this.$value = v;
       }else this.$value = v;
       return this;

@@ -13,7 +13,7 @@ declare global {
     routes: ConfigType.Route[],
     theme?: typeof Theme
   } & {[key: string]: any};
-  var Router: NSRouter
+  var Router: NSRouter;
   interface String {
     watch: (_ : (v: any) => void) => void
   }
@@ -330,6 +330,7 @@ export type RxElement = {
 
   onCreate?: Function;
   onUpdate?: Function;
+  onDestroy?: Function;
 
   //input model
   model?: (object: any) => RxElement
@@ -702,6 +703,7 @@ export type RxElement = {
   playsInline: (value: string | number | string[] | number[]) => RxElement
   poster: (value: string | number | string[] | number[]) => RxElement
   preload: (value: string | number | string[] | number[]) => RxElement
+  preserveAspectRatio: (value: 'none' | 'xMinYMin' | 'xMidYMin' | 'xMaxYMin' | 'xMinMid' | 'xMidYMid' | 'xMaxYMid' | 'xMinYMax' | 'xMidYMax' | 'xMaxYMax' | 'meet' | 'slice') => RxElement
   profile: (value: string | number | string[] | number[]) => RxElement
   prompt: (value: string | number | string[] | number[]) => RxElement
   readOnly: (value: string | number | string[] | number[]) => RxElement
@@ -808,8 +810,10 @@ export type ElementEvent = {
   click?: () => void
   close?: () => void
   contextmenu?: () => void
+  create?: () => void
   cuechange?: () => void
   dblclick?: () => void
+  destroy?: () => void
   drag?: () => void
   dragend?: () => void
   dragenter?: () => void

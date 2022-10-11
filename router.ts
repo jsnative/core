@@ -1,3 +1,4 @@
+//@ts-ignore
 import Config from '@src/config';
 import Props from './props';
 import { Component, Style, $RxElement, Container } from './components';
@@ -16,7 +17,6 @@ export default class Router {
   private events: {name: string, listener: (..._: any[]) => void}[];
 
   constructor() {
-
     // window.Bus = window.Bus || new Bus();
     this.window.Config = Config;
     if(Config.theme) this.window.Theme = Config.theme;
@@ -78,6 +78,7 @@ export default class Router {
     }
 
     this.loadRoute();
+    history.pushState({}, '', location.href);
 
     window.onpopstate = (_: any) => this.loadRoute();
   }
@@ -109,8 +110,8 @@ export default class Router {
         }
       }
     }
-    if((<any>window).__native_load_complete_queue && (<any>window).__native_load_complete_queue.length > 0) {
-      (<any>window).__native_load_complete_queue.forEach((i: Function) => i());
+    if(this.window.__native_load_complete_queue && this.window.__native_load_complete_queue.length > 0) {
+      this.window.__native_load_complete_queue.forEach((i: Function) => i());
     }
     if(!loaded) {
       console.error(`Path ${location.pathname} not configured`);
@@ -147,7 +148,11 @@ export default class Router {
 
   go (path: string) {
     if(path === window.location.pathname) return;
-    window.history.pushState({'name': 'special'}, '', path);
+    window.scrollTo(0,0);
+    window.history.pushState({}, '', location.href);
+    let current = this.window.Config.useHash ? window.location.hash.slice(1) : window.location.pathname;
+    if(path === current) return;
+    this.window.Config.useHash ? location.hash = path : window.history.pushState({}, '', path);
     this.events.forEach(i => (i.name === 'go') && i.listener(path));
     let loaded = false;
     for (let i = 0; i < this.routes.length; i++) {
@@ -183,10 +188,9 @@ export default class Router {
 
   pathData(route: ConfigType.Route, sub: boolean = false) {
     let path = (sub && this.current.path !== '/') ? this.current.path + route.path : route.path;
-    let current = window.location.pathname;
+    let current = this.window.Config.useHash ? window.location.hash.slice(1) : window.location.pathname;
     if(current[current.length - 1] == '/') current = current.substring(0, current.length - 1);
     if(path[path.length - 1] == '/') path = path.substring(0, path.length - 1);
-
     const variables: any = {};
     path.split('/').map((i, index) => {
       if(i.indexOf(':') > -1) {
