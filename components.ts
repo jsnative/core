@@ -3,7 +3,7 @@ import {
   RxElement, ElementEvent, NativeLock, StyleProperties, FlexAlignment, FlexAlignmentItem, ConfigType,
   GlobalValues, Color, BorderStyle, BorderWidth, CSSImage, Space, Break, Number
 } from './types';
-import { ProxifyComponent, ProxifyState, $observeArray } from './proxify';
+import { ProxifyComponent } from './proxify';
 import NativeClass from './native';
 import {createRules} from './styles';
 
@@ -1242,27 +1242,6 @@ export class Component extends $RxElement {
     this.display('block');
 
     return ProxifyComponent(this, this.name, this.$nid) as Component;
-  }
-
-  set state(v) {
-    if(type(v) !== 'object') {
-      throw new Error('Invalid state format, state must be an object');
-    }
-    if(!Native().components[this.name][this.$nid]){
-      throw new Error('Set state: Component doesn\'t exist or has been destroy');
-    }
-    v.__state__ = true;
-    Native().components[this.name][this.$nid].state =
-      Native().components[this.name][this.$nid].state
-      || Native().components[this.name].state
-      || ProxifyState(v, this.name, this.$nid);
-  }
-
-  get state() {
-    if(!Native().components[this.name][this.$nid]){
-      throw new Error('Get state: Component doesn\'t exist or has been destroy');
-    }
-    return Native().components[this.name][this.$nid].state;
   }
 
   get route() {
