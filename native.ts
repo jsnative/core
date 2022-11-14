@@ -175,6 +175,9 @@ class Native {
       window.onbeforeunload = (e: any) => {
         if (newInstance.onDestroy) newInstance.onDestroy();
         const cascadeDestroy = (c0: $RxElement) => {
+          c0.$events.forEach((event: any) => {
+            c0.node().removeEventListener(event.name, event.event);
+          });
           if (c0.$events && c0.$events.find((ev: any) => ev.name === 'destroy')) {
             c0.dispatch('destroy');
           }

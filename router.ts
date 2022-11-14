@@ -41,7 +41,12 @@ export default class Router {
           this.$rules = this.$rules || [];
           if (this.$rules.length > 0) {
             try {
-              this.$rules[this.$rules.length - 1].style.setProperty(key, (<any>window).Native.parseStyleValue(value));
+              const parsedValue = (<any>window).Native.parseStyleValue(value);
+              this.$rules[this.$rules.length - 1].style.setProperty(
+                key,
+                parsedValue.indexOf('!') > -1 ? parsedValue.replace(/\!important/g, '') : parsedValue,
+                parsedValue.indexOf('!') > -1 ? 'important' : ''
+              );
             } catch (e) {
               throw Error('Style not applied: ' + prop + ' ' + e.message);
             }

@@ -115,6 +115,12 @@ export class $RxElement {
     }
   }
 
+  removeEventListener(type: string, listener?: () => void) {
+    if (this.$node) {
+      this.$node.removeEventListener(type, listener || this.$events.find((e: any) => e.name === type).event, { capture: true });
+    }
+  }
+
   node(): Element { return this.$node; }
   parent(): $RxElement { return this.$root; }
   children(): ($RxElement | string)[] { return this.$children; }
